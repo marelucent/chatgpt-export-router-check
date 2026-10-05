@@ -1,0 +1,5 @@
+# Never commit anyone's export or results
+router-check-results/
+*.zip
+conversations*.json
+__pycache__/
