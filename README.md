@@ -120,6 +120,7 @@ Some honest limits:
 - **"Likely switched" is a strong clue, not proof.** Each reply records the model that turn was meant for as well as the model that answered. When the turn was meant for 4o and another model answered, something switched it. We checked this against that unflagged morning and it caught every switch, but it is one person's export, and OpenAI has never documented these labels.
 - **Older exports may not have the clue.** If your replies don't carry the "meant for" label, those switches will show as "possible switch" instead.
 - **"Mini" fallback is a likely reading, not a certainty.** ChatGPT has long fallen back to smaller models when you hit a usage limit, but the export doesn't say why a mini answered.
+- **It can't show the things you stopped yourself saying.** Many of us learned to soften a message before we ever pressed send. A message you never wrote leaves no trace in the export, so the true cost of the router is larger than anything here can count.
 - **The rewrite line is a ceiling.** "More than one version" counts edits *and* regenerations of your messages.
 - **Exports can be incomplete.** If something seems missing, it may be missing from the export, not from your life.
 - **All times are in UTC.**
