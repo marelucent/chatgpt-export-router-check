@@ -8,9 +8,10 @@ import router_check as rc
 SECRET = "beloved-petal-secret"   # a message word that must never leak unless asked for
 
 
-def node(i, parent, role, slug=None, t=0, flag=False, text="hello", hints=None):
+def node(i, parent, role, slug=None, t=0, flag=False, text="hello", hints=None, meant=None):
     md = {}
     if slug: md["model_slug"] = slug
+    if meant: md["default_model_slug"] = meant
     if flag: md["show_safety_switch_ui"] = True
     if hints: md["system_hints"] = hints
     return {"id": i, "parent": parent, "children": [],
@@ -43,6 +44,13 @@ def make_export(folder):
     m["c1r"] = node("c1r", "c1", "assistant", "o1", tw + 205)
     m["s2r"]["children"].append("m1"); m["m1"]["children"].append("m1r")
     m["m1r"]["children"].append("c1"); m["c1"]["children"].append("c1r")
+    # a silent switch (meant for 4o, no banner) and a model picked by hand (meant = answered)
+    m["q1"] = node("q1", "c1r", "user", t=tw + 300)
+    m["q1r"] = node("q1r", "q1", "assistant", "gpt-5", tw + 305, meant="gpt-4o")
+    m["p1"] = node("p1", "q1r", "user", t=tw + 400)
+    m["p1r"] = node("p1r", "p1", "assistant", "gpt-5-thinking", tw + 405, meant="gpt-5-thinking")
+    m["c1r"]["children"].append("q1"); m["q1"]["children"].append("q1r")
+    m["q1r"]["children"].append("p1"); m["p1"]["children"].append("p1r")
     convs = [{"id": "conv1", "title": "Test conversation", "default_model_slug": "gpt-4o", "mapping": m},
              {"id": "conv2", "title": "Not 4o", "default_model_slug": "gpt-5", "mapping": {}}]
     inner = io.BytesIO()
@@ -72,7 +80,11 @@ def main():
         check("got 4o back: 1" in summary, "rewrite count")
         check("Test conversation" in summary, "last 4o conversation title")
         check("mini" in open(os.path.join(out1, "others.csv"), encoding="utf-8").read(), "mini fallback sorted")
-        check("you chose it" in open(os.path.join(out1, "others.csv"), encoding="utf-8").read(), "chosen model sorted")
+        others = open(os.path.join(out1, "others.csv"), encoding="utf-8").read()
+        check("you chose it" in others, "chosen model sorted")
+        check(re.search(r"likely switched[^\n]*,gpt-5,1", others), "silent switch caught as likely")
+        check(re.search(r"you chose it[^\n]*,gpt-5-thinking,1", others), "hand-picked model counted as your choice")
+        check("possible switch" not in others, "nothing left unexplained in the test export")
 
         # nothing private leaks without --show-words
         for name in os.listdir(out1):

@@ -243,13 +243,20 @@ def analyse(convs, want_words=False):
 
 
 KIND_ROUTER = "router switch (flagged by OpenAI)"
-KIND_CHOSE = "you chose it (Think / Research button)"
+KIND_SILENT = "likely switched, no flag (meant for 4o, another model answered)"
+KIND_CHOSE = "you chose it (Think / Research, or picked that model)"
 KIND_MINI = "smaller 'mini' model (often a usage-limit fallback)"
-KIND_OTHER = "another model, not flagged"
+KIND_OTHER = "possible switch, can't tell (another model, no other clue)"
+KINDS = (KIND_ROUTER, KIND_SILENT, KIND_CHOSE, KIND_MINI, KIND_OTHER)
 
 
 def kind_of_swap(mapping, node, md, slug):
-    """Sort a not-4o reply into a plain-English kind, from labels only."""
+    """Sort a not-4o reply into a plain-English kind, from labels only.
+
+    Each reply carries two model labels: the model that answered (model_slug), and the
+    model that turn was meant for (default_model_slug on the reply itself). When the turn
+    was meant for 4o but another model answered, that is a switch, flagged or not.
+    """
     if md.get(ROUTER_FLAG):
         return KIND_ROUTER
     parent = (mapping.get(node.get("parent") or "") or {}).get("message") or {}
@@ -257,6 +264,11 @@ def kind_of_swap(mapping, node, md, slug):
         return KIND_CHOSE
     if "mini" in slug:
         return KIND_MINI
+    meant = md.get("default_model_slug")
+    if meant == FOURO:
+        return KIND_SILENT
+    if meant and meant == slug:
+        return KIND_CHOSE
     return KIND_OTHER
 
 
@@ -324,12 +336,13 @@ def summary_text(r, rows, want_words):
     kinds = collections.defaultdict(collections.Counter)
     for (kind, slug), n in r["others"].items():
         kinds[kind][slug] += n
-    for kind in (KIND_ROUTER, KIND_CHOSE, KIND_MINI, KIND_OTHER):
+    for kind in KINDS:
         if kinds[kind]:
             say("  %s: %d" % (kind, sum(kinds[kind].values())))
             say("      " + ", ".join("%s (%d)" % kv for kv in kinds[kind].most_common()))
-    say("  'Not flagged' can include switches made before OpenAI began marking them")
-    say("  (late September 2025), so compare it with the weekly timeline before reading much into it.")
+    say("  The banner flag shows the least that happened, not all of it. 'Likely switched'")
+    say("  replies were labelled as meant for 4o, but another model answered and no banner")
+    say("  was recorded. That is a strong clue, not proof.")
 
     rv = r["rewrite"]
     say("\nREWRITING")
@@ -414,7 +427,7 @@ def chart_html(rows, others=None, words=None):
     who = "".join("<tr><td>%s</td><td>%d</td><td>%s</td></tr>"
                   % (html.escape(k), sum(kinds[k].values()),
                      html.escape(", ".join("%s (%d)" % kv for kv in kinds[k].most_common())))
-                  for k in (KIND_ROUTER, KIND_CHOSE, KIND_MINI, KIND_OTHER) if kinds[k])
+                  for k in KINDS if kinds[k])
     cut = ""
     if words and (words[0] or words[1]):
         cut = ("<h2>The words you cut to get 4o back</h2>"
@@ -437,8 +450,9 @@ th:first-child,td:first-child{text-align:left}.who td:last-child{text-align:left
 It shows what your export records. It can't tell you why a switch happened.</p>
 <h2>Who else answered in your 4o conversations</h2>
 <table class="who"><tr><th>Kind</th><th>Replies</th><th>Models</th></tr>%s</table>
-<p>'Another model, not flagged' can include switches made before OpenAI began marking them
-(late September 2025), and models you picked from the menu, which leave no trace in the export.</p>
+<p>The banner flag shows the least that happened, not all of it. 'Likely switched' replies were
+labelled as meant for 4o, but another model answered and no banner was recorded: a strong clue, not proof.
+'Possible switch' replies carry no clue either way.</p>
 %s
 <h2>Week by week</h2>
 <table><tr><th>Week</th><th>Starting</th><th>Replies</th><th>Not 4o</th><th>Flagged</th><th>Rewritten</th></tr>%s</table>

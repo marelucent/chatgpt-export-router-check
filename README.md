@@ -34,7 +34,12 @@ From your own export, on your own computer:
 
 - **The router.** Every reply OpenAI marked as a safety switch (`show_safety_switch_ui` in the export), when the first and last came, and which models answered instead.
 - **The step.** A week-by-week chart of how many replies in your 4o conversations came from a different model, and how often you rewrote your messages. For many people, the router's arrival shows as a cliff.
-- **Who else answered.** Every reply that wasn't from 4o, sorted into plain kinds: router switches, models you chose yourself (the Think or Research buttons), smaller "mini" models (often a usage-limit fallback), and the rest.
+- **Who else answered, including the switches nobody told you about.** Every reply that wasn't from 4o, sorted by how sure we can be:
+  - **Router switch (flagged):** OpenAI's own banner flag. Certain.
+  - **Likely switched, no flag:** the export labels that turn as *meant for 4o*, but another model answered and no banner was recorded.
+  - **You chose it:** the Think or Research buttons, or a model you picked yourself.
+  - **Mini:** a smaller model, often a usage-limit fallback.
+  - **Possible switch:** another model answered, with no other clue either way.
 - **The rewriting.** How many times your message was switched, you rewrote it, and the rewrite got 4o back.
 - **Your last conversation with 4o.** When 4o last spoke to you, the title of that conversation, how long before it the last switch came, and how many switches there were in your final fourteen days.
 
@@ -111,8 +116,9 @@ Before the router, most people will see both lines lying close to zero. Look for
 
 Some honest limits:
 
-- **The banner flag started a few days late.** The router arrived around 26–27 September 2025, but the flag first appears in exports in early October. Switches in that first week show up as "another model, not flagged".
-- **Models you picked from the menu leave no trace.** Choosing GPT-4.5 or o1 from the model menu looks the same in the export as being switched to it without a flag. Only the Think and Research buttons leave a mark. So read the "not flagged" group with care.
+- **The banner flag shows the least that happened, not all of it.** It began a few days after the router arrived (late September 2025), and even afterwards many switches were never flagged. In testing, one whole morning of repeated switches, a day the person remembers clearly, carried no flags at all.
+- **"Likely switched" is a strong clue, not proof.** Each reply records the model that turn was meant for as well as the model that answered. When the turn was meant for 4o and another model answered, something switched it. We checked this against that unflagged morning and it caught every switch, but it is one person's export, and OpenAI has never documented these labels.
+- **Older exports may not have the clue.** If your replies don't carry the "meant for" label, those switches will show as "possible switch" instead.
 - **"Mini" fallback is a likely reading, not a certainty.** ChatGPT has long fallen back to smaller models when you hit a usage limit, but the export doesn't say why a mini answered.
 - **The rewrite line is a ceiling.** "More than one version" counts edits *and* regenerations of your messages.
 - **Exports can be incomplete.** If something seems missing, it may be missing from the export, not from your life.
