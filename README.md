@@ -137,7 +137,7 @@ python router_check.py --show-words
 
 This adds a list of the words you most often **removed** when you rewrote a switched message and got 4o back, and the words you **added** instead.
 
-**Read the list gently.** It isn't necessarily a list of banned words. It shows what *you* changed, and people rewrote for different reasons. What the router was actually responding to can't be told from word counts alone. That needs a closer reading of the messages themselves, which is what the companion tool, chatgpt-export-sycophancy-check, is for.
+**Read the list gently.** It isn't necessarily a list of banned words. It shows what *you* changed, and people rewrote for different reasons. What the router was actually responding to can't be told from word counts alone. That needs a closer reading of the messages themselves, which is what the companion tool, [chatgpt-export-sycophancy-check](https://github.com/marelucent/chatgpt-export-sycophancy-check), is for.
 
 To do this, the tool reads the text of those rewritten messages, **on your computer only**. Nothing is saved except the word lists, in your own `summary.txt` and `timeline.html`. It's off unless you ask for it, because for some people seeing those words will be hard.
 
@@ -187,7 +187,7 @@ This tool:
 ## Related
 
 - **[chatgpt-export-reader](https://github.com/marelucent/chatgpt-export-reader)** turns your export into readable conversations you can keep. It's the way to open your last conversation with 4o, if you choose to.
-- **chatgpt-export-sycophancy-check** *(coming)* uses a local AI model, on your own computer, to look at what preceded each switch and at the tone of 4o's replies.
+- **[chatgpt-export-sycophancy-check](https://github.com/marelucent/chatgpt-export-sycophancy-check)** uses a local AI model, on your own computer, to look at what you had written just before each switch, and at the tone of 4o's replies over time.
 
 ---
 
