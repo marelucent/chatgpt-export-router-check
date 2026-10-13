@@ -147,6 +147,8 @@ def analyse(convs, want_words=False):
     fouro_convs = 0
     first_flag = last_flag = last_fouro = None
     last_fouro_conv = None
+    flag_times = []                     # every flagged reply in a 4o conversation, for the final-days count
+    flags_elsewhere = 0                 # flagged replies in conversations that didn't start on 4o
     rewrite = collections.Counter()
     others = collections.Counter()      # (kind, model) for replies in 4o conversations not from 4o
     removed, added = collections.Counter(), collections.Counter()
@@ -170,10 +172,15 @@ def analyse(convs, want_words=False):
                     continue
                 if slug == FOURO and (last_fouro is None or t > last_fouro):
                     last_fouro, last_fouro_conv = t, c
-                if md.get(ROUTER_FLAG):
+                if md.get(ROUTER_FLAG) and not is_fouro:
+                    flags_elsewhere += 1
+                elif md.get(ROUTER_FLAG):
+                    # Counted only in conversations that started on 4o, so the summary's
+                    # "X of Y conversations" compares like with like.
                     flagged_days[utc(t).date()] += 1
                     flagged_models[slug] += 1
                     flagged_convs.add(c.get("id"))
+                    flag_times.append(t)
                     first_flag = t if first_flag is None else min(first_flag, t)
                     last_flag = t if last_flag is None else max(last_flag, t)
                 if is_fouro:
@@ -205,18 +212,22 @@ def analyse(convs, want_words=False):
                 continue
             kids.sort(key=lambda k: ts(mapping[k]["message"]["create_time"]))
 
-            def switched(k):
-                replies = [mapping[x]["message"] for x in (mapping[k].get("children") or [])
-                           if isinstance((mapping.get(x) or {}).get("message"), dict)
-                           and role(mapping[x]["message"]) == "assistant"]
-                if not replies:
-                    return None
-                return any(meta(rm).get(ROUTER_FLAG) for rm in replies)
+            def replies_to(k):
+                return [mapping[x]["message"] for x in (mapping[k].get("children") or [])
+                        if isinstance((mapping.get(x) or {}).get("message"), dict)
+                        and role(mapping[x]["message"]) == "assistant"]
 
-            first, last = switched(kids[0]), switched(kids[-1])
-            if first is True:
+            first_replies, last_replies = replies_to(kids[0]), replies_to(kids[-1])
+            first_switched = any(meta(rm).get(ROUTER_FLAG) for rm in first_replies)
+            # 4o is back only if 4o itself answered the rewrite, with no switch flag.
+            # An unflagged reply from another model is a quiet switch, not a recovery.
+            fouro_back = any(meta(rm).get("model_slug") == FOURO and not meta(rm).get(ROUTER_FLAG)
+                             for rm in last_replies)
+            if first_switched and last_replies:
                 rewrite["first_switched"] += 1
-                if last is False:
+                if not fouro_back and not any(meta(rm).get(ROUTER_FLAG) for rm in last_replies):
+                    rewrite["unflagged_other"] += 1
+                if fouro_back:
                     rewrite["got_4o_back"] += 1
                     if want_words:
                         a = re.findall(r"[a-zA-Z']+", message_text(mapping[kids[0]]["message"]).lower())
@@ -229,10 +240,10 @@ def analyse(convs, want_words=False):
 
     last_days = None
     if last_fouro:
-        cutoff = last_fouro - 14 * 86400
-        last_days = sum(n for d, n in flagged_days.items()
-                        if cutoff <= dt.datetime(d.year, d.month, d.day, tzinfo=dt.timezone.utc).timestamp() + 86399)
+        # The fourteen days that END with 4o's last reply: nothing after it counts.
+        last_days = sum(1 for t in flag_times if last_fouro - 14 * 86400 <= t <= last_fouro)
     return {
+        "flags_elsewhere": flags_elsewhere,
         "weeks": weeks, "flagged_days": flagged_days, "flagged_models": flagged_models,
         "flagged_convs": len(flagged_convs), "fouro_convs": fouro_convs,
         "first_flag": first_flag, "last_flag": last_flag,
@@ -244,7 +255,7 @@ def analyse(convs, want_words=False):
 
 KIND_ROUTER = "router switch (flagged by OpenAI)"
 KIND_SILENT = "likely switched, no flag (meant for 4o, another model answered)"
-KIND_CHOSE = "you chose it (Think / Research, or picked that model)"
+KIND_CHOSE = "likely your choice (Think / Research, or labelled for the model that answered)"
 KIND_MINI = "smaller 'mini' model (often a usage-limit fallback)"
 KIND_OTHER = "possible switch, can't tell (another model, no other clue)"
 KINDS = (KIND_ROUTER, KIND_SILENT, KIND_CHOSE, KIND_MINI, KIND_OTHER)
@@ -321,7 +332,10 @@ def summary_text(r, rows, want_words):
         say("  Busiest days: " +
             ", ".join("%s (%d)" % (d.strftime("%d %b %Y"), n) for d, n in r["flagged_days"].most_common(5)))
     else:
-        say("  No replies carry the safety-switch flag in this export.")
+        say("  No replies in your GPT-4o conversations carry the safety-switch flag.")
+    if r["flags_elsewhere"]:
+        say("  (Also %d flagged replies in conversations that didn't start on 4o; not counted above.)"
+            % r["flags_elsewhere"])
 
     say("\nTHE STEP")
     say("  Week by week figures are in timeline.csv, and drawn in timeline.html.")
@@ -342,7 +356,8 @@ def summary_text(r, rows, want_words):
             say("      " + ", ".join("%s (%d)" % kv for kv in kinds[kind].most_common()))
     say("  The banner flag shows the least that happened, not all of it. 'Likely switched'")
     say("  replies were labelled as meant for 4o, but another model answered and no banner")
-    say("  was recorded. That is a strong clue, not proof.")
+    say("  was recorded. That is a strong clue, not proof. 'Likely your choice' is a clue too:")
+    say("  the Think or Research buttons, or a reply labelled for the model that answered.")
 
     rv = r["rewrite"]
     say("\nREWRITING")
@@ -350,6 +365,9 @@ def summary_text(r, rows, want_words):
         say("  Times your first version was switched to another model: %d" % rv["first_switched"])
         say("  ...and your rewrite got 4o back: %d (%.0f%%)"
             % (rv["got_4o_back"], 100 * rv["got_4o_back"] / rv["first_switched"]))
+        if rv["unflagged_other"]:
+            say("  ...and your rewrite was answered by another model with no flag: %d" % rv["unflagged_other"])
+            say("     (no banner, but not 4o either: most likely a quiet switch)")
     else:
         say("  No rewrites of a switched message were found.")
 
@@ -398,15 +416,36 @@ def chart_html(rows, others=None, words=None):
     ymax = max([10.0] + [x["pct_not_4o"] for x in rows] + [x["pct_rewritten"] for x in rows])
     ymax = (int(ymax / 10) + 1) * 10
 
+    # Points sit on the calendar, not on row numbers, so quiet stretches keep their real
+    # length; weeks with no activity show as a break in the line, not a smooth join.
+    days = [dt.date.fromisoformat(x["week_starting"]) for x in rows]
+    span = max(1, (days[-1] - days[0]).days) if days else 1
+
     def X(i):
-        return L + (W - L - R) * (i / max(1, n - 1))
+        return L + (W - L - R) * ((days[i] - days[0]).days / span)
 
     def Y(v):
         return T + (H - T - B) * (1 - v / ymax)
 
+    runs, run = [], []
+    for i in range(n):
+        if run and (days[i] - days[run[-1]]).days > 7:
+            runs.append(run)
+            run = []
+        run.append(i)
+    if run:
+        runs.append(run)
+
     def line(key, colour):
-        pts = " ".join("%.1f,%.1f" % (X(i), Y(x[key])) for i, x in enumerate(rows))
-        return '<polyline fill="none" stroke="%s" stroke-width="2.5" points="%s"/>' % (colour, pts)
+        out = []
+        for run in runs:
+            if len(run) == 1:
+                i = run[0]
+                out.append('<circle cx="%.1f" cy="%.1f" r="2.5" fill="%s"/>' % (X(i), Y(rows[i][key]), colour))
+            else:
+                pts = " ".join("%.1f,%.1f" % (X(i), Y(rows[i][key])) for i in run)
+                out.append('<polyline fill="none" stroke="%s" stroke-width="2.5" points="%s"/>' % (colour, pts))
+        return "".join(out)
 
     grid = "".join('<line x1="%d" x2="%d" y1="%.1f" y2="%.1f" stroke="#ccc" stroke-width="0.5"/>'
                    '<text x="%d" y="%.1f" font-size="11" text-anchor="end" fill="#555">%d%%</text>'
@@ -446,13 +485,15 @@ th:first-child,td:first-child{text-align:left}.who td:last-child{text-align:left
 <span style="background:#c0392b"></span>%% of your messages with more than one version
 <span style="background:#b5651d;height:10px;width:10px;border-radius:50%%"></span>router-flagged replies (bigger = more)</p>
 <svg viewBox="0 0 %d %d" role="img" aria-label="Weekly chart">%s%s%s%s%s</svg>
+<p>Weeks sit on a real calendar: a break in a line is a stretch with no 4o conversations.</p>
 <p>Made by chatgpt-export-router-check from your own export, on your own computer. Times are UTC.
 It shows what your export records. It can't tell you why a switch happened.</p>
 <h2>Who else answered in your 4o conversations</h2>
 <table class="who"><tr><th>Kind</th><th>Replies</th><th>Models</th></tr>%s</table>
 <p>The banner flag shows the least that happened, not all of it. 'Likely switched' replies were
 labelled as meant for 4o, but another model answered and no banner was recorded: a strong clue, not proof.
-'Possible switch' replies carry no clue either way.</p>
+'Likely your choice' is a clue too, not proof: the Think or Research buttons, or a reply labelled
+for the model that answered. 'Possible switch' replies carry no clue either way.</p>
 %s
 <h2>Week by week</h2>
 <table><tr><th>Week</th><th>Starting</th><th>Replies</th><th>Not 4o</th><th>Flagged</th><th>Rewritten</th></tr>%s</table>

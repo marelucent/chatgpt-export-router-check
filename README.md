@@ -37,11 +37,11 @@ From your own export, on your own computer:
 - **Who else answered, including the switches nobody told you about.** Every reply that wasn't from 4o, sorted by how sure we can be:
   - **Router switch (flagged):** OpenAI's own banner flag. Certain.
   - **Likely switched, no flag:** the export labels that turn as *meant for 4o*, but another model answered and no banner was recorded.
-  - **You chose it:** the Think or Research buttons, or a model you picked yourself.
+  - **Likely your choice:** the Think or Research buttons, or a reply labelled for the model that answered, which usually means you picked it. A strong clue, not proof.
   - **Mini:** a smaller model, often a usage-limit fallback.
   - **Possible switch:** another model answered, with no other clue either way.
-- **The rewriting.** How many times your message was switched, you rewrote it, and the rewrite got 4o back.
-- **Your last conversation with 4o.** When 4o last spoke to you, the title of that conversation, how long before it the last switch came, and how many switches there were in your final fourteen days.
+- **The rewriting.** How many times your message was switched, you rewrote it, and 4o itself answered the rewrite. If a rewrite was answered by another model with no banner, it's counted separately, as most likely a quiet switch, not a recovery.
+- **Your last conversation with 4o.** When 4o last spoke to you, the title of that conversation, how long before it the last switch came, and how many switches there were in the fourteen days (to the hour) that ended with 4o's last reply.
 
 **It never shows your messages.** It reads labels, dates and the shape of each conversation, nothing more. (One optional setting reads your own rewrites. See [Optional: the words you cut](#optional-the-words-you-cut).)
 
@@ -104,6 +104,8 @@ router-check-results/
 - **Red line:** the share of your messages that have more than one version, meaning you edited or regenerated them.
 - **Brown dots** under the chart: weeks with router-flagged replies. Bigger dots mean more.
 
+Weeks sit on a real calendar, so a stretch when you weren't talking to 4o keeps its true length. A break in a line means a week or more with no 4o conversations, not a smooth change.
+
 Before the router, most people will see both lines lying close to zero. Look for the week they lift.
 
 ---
@@ -119,6 +121,8 @@ Some honest limits:
 - **The banner flag shows the least that happened, not all of it.** It began a few days after the router arrived (late September 2025), and even afterwards many switches were never flagged. In testing, one whole morning of repeated switches, a day the person remembers clearly, carried no flags at all.
 - **"Likely switched" is a strong clue, not proof.** Each reply records the model that turn was meant for as well as the model that answered. When the turn was meant for 4o and another model answered, something switched it. We checked this against that unflagged morning and it caught every switch, but it is one person's export, and OpenAI has never documented these labels.
 - **Older exports may not have the clue.** If your replies don't carry the "meant for" label, those switches will show as "possible switch" instead.
+- **"Likely your choice" is a clue too.** The Think and Research buttons, or a reply labelled for the model that answered, usually mean you picked that model. But the export doesn't record your click, so treat it as likely, not certain.
+- **The router counts cover conversations that started on 4o.** If any flagged replies turn up in conversations that started on another model, the summary reports them separately rather than mixing them in.
 - **"Mini" fallback is a likely reading, not a certainty.** ChatGPT has long fallen back to smaller models when you hit a usage limit, but the export doesn't say why a mini answered.
 - **It can't show the things you stopped yourself saying.** Many of us learned to soften a message before we ever pressed send. A message you never wrote leaves no trace in the export, so the true cost of the router is larger than anything here can count.
 - **The rewrite line is a ceiling.** "More than one version" counts edits *and* regenerations of your messages.
