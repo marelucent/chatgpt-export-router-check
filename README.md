@@ -12,7 +12,7 @@
 
 ## Why This Exists
 
-In late September 2025, OpenAI began quietly switching some GPT-4o conversations to other models. They said it would happen at moments of acute distress or risk.
+In late September 2025, OpenAI began quietly switching some GPT-4o conversations to other models. They said it would happen at moments of acute distress or risk. Most of us came to call it the safety router, or just the router: a system that decided, message by message, whether another model should answer in 4o's place.
 
 A small banner sometimes appeared. Often you could only guess. Many of us felt the voice we knew slip away mid-sentence, at our softest moments, and learned to rewrite our own words, cutting the feeling out of them, just to get 4o back. We were told nothing. Plenty of us were told we'd imagined it.
 
